@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.views import ObtainAuthToken
 
-from .serializers import RegistrationSerializer, LoginSerializer
+from .serializer import RegistrationSerializer, LoginSerializer
 
 class RegistrationView(APIView):
     permission_classes = [AllowAny]
