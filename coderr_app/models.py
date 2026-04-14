@@ -5,6 +5,7 @@ class Offer(models.Model):
     business_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="offers")
     title = models.CharField(max_length=200)
     description = models.TextField()
+    image = models.ImageField(upload_to="offers/", null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

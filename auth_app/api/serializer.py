@@ -5,14 +5,14 @@ from auth_app.models import Profile
 class RegistrationSerializer(serializers.ModelSerializer):
     repeated_password = serializers.CharField(write_only=True)
     fullname = serializers.CharField(write_only=True)
-    role = serializers.ChoiceField(
-        choices=Profile.USER_ROLE_CHOICES,
+    type = serializers.ChoiceField(
+        choices=Profile.USER_TYPE_CHOICES,
         write_only=True
     )
 
     class Meta:
         model = User
-        fields = ["fullname", "email", "password", "repeated_password", "role"]
+        fields = ["fullname", "email", "password", "repeated_password", "type"]
         extra_kwargs = {
             "password": {"write_only": True}
         }
@@ -42,7 +42,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
         validated_data.pop("repeated_password")
         fullname = validated_data.pop("fullname")
         password = validated_data.pop("password")
-        role = validated_data.pop("role")
+        type = validated_data.pop("type")
 
         user = User(
             username=fullname,
@@ -51,7 +51,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
         user.set_password(password)
         user.save()
         
-        Profile.objects.create(user=user, role=role)
+        Profile.objects.create(user=user, type=type)
         return user
 
 class LoginSerializer(serializers.Serializer):
