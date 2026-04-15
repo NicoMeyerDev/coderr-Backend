@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 class Offer(models.Model):
@@ -48,7 +49,7 @@ class Order(models.Model):
     revisions = models.PositiveIntegerField(default=1)
     delivery_time_in_days = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    features = models.JSONField(default=list, blank=True)
+    features = models.TextField(default=list, blank=True)
     offer_type = models.CharField(max_length=20, choices=OfferDetail.OFFER_TYPE_CHOICES, default="basic")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="in_progress")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -57,7 +58,7 @@ class Order(models.Model):
 class Review(models.Model):
     business_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="reviews")
     reviewer = models.ForeignKey(User, on_delete=models.CASCADE, related_name="given_reviews")
-    rating = models.PositiveIntegerField()
+    rating = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
     description = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
