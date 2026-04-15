@@ -13,10 +13,10 @@ class OfferView(mixins.ListModelMixin, mixins.CreateModelMixin, generics.Generic
     serializer_class = OfferSerializer
     #permission_classes = [IsAuthenticated]
 
-    #Nur Boards anzeigen, wo User Owner oder Mitglied ist
-    def get_queryset(self,request, *args, **kwargs):
-        return self.list(request, *args, **kwargs)
-
+    #GET Liste
+    def get_queryset(self):
+        return Offer.objects.all()
+    
     #GET Liste
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
