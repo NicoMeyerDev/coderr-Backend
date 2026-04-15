@@ -1,11 +1,12 @@
+from rest_framework.generics import RetrieveUpdateAPIView, ListAPIView
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.views import ObtainAuthToken
-
-from .serializer import RegistrationSerializer, LoginSerializer
+from auth_app.models import Profile
+from .serializer import RegistrationSerializer, LoginSerializer, ProfileSerializer, ProfileUpdateSerializer
 
 class RegistrationView(APIView):
     permission_classes = [AllowAny]
@@ -60,14 +61,26 @@ class CustomLoginView(ObtainAuthToken):
 
         return Response(serializer.errors, status=400)
 
-class LogoutView(APIView):
+class ProfileView(RetrieveUpdateAPIView):
+    queryset = Profile.objects.all()
+    permission_classes = [IsAuthenticated]
 
-    def post(self, request):
-        """
-        Delete the current user's auth token to log the user out.
-        """
-        request.user.auth_token.delete()
-        return Response(
-            {"detail": "Logout successful. Token was deleted."},
-            status=status.HTTP_200_OK
-        )
+    def get_serializer_class(self):
+        if self.request.method == "PATCH":
+            return ProfileUpdateSerializer
+        return ProfileSerializer
+
+    def get_queryset(self):
+        return Profile.objects.filter(user=self.request.user)
+    
+class BusinessProfileListView(ListAPIView):
+    serializer_class = ProfileSerializer
+
+    def get_queryset(self):
+        return Profile.objects.filter(type="business")
+
+class CustomerProfileListView(ListAPIView):
+    serializer_class = ProfileSerializer
+
+    def get_queryset(self):
+        return Profile.objects.filter(type="customer")        
