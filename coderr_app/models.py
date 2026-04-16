@@ -34,7 +34,8 @@ class OfferDetail(models.Model):
 
     def __str__(self):
         return f"{self.offer.title} - {self.title} ({self.offer_type})"    
-
+ 
+ 
 class Order(models.Model):
 
     STATUS_CHOICES = [
@@ -54,6 +55,7 @@ class Order(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="in_progress")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+ 
 
 class Review(models.Model):
     business_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="reviews")

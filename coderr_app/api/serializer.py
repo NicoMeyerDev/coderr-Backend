@@ -14,7 +14,7 @@ class UserSerializer(serializers.ModelSerializer):
     def get_fullname(self, obj):
         return obj.get_full_name() or obj.username
     
-    
+
 class OfferSerializer(serializers.ModelSerializer):
     user = serializers.IntegerField(source="business_user.id", read_only=True)
     details = serializers.SerializerMethodField()
@@ -101,3 +101,12 @@ class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
         fields = ["id", "business_user", "reviewer", "rating", "description", "created_at", "updated_at"]
+
+class BaseInfoSerializer(serializers.Serializer):
+    total_reviews = serializers.IntegerField()
+    average_rating = serializers.FloatField()
+    total_business_users = serializers.IntegerField()
+    total_offers = serializers.IntegerField()
+
+    class Meta:
+        fields = ["total_reviews", "average_rating", "total_business_users", "total_offers"]
