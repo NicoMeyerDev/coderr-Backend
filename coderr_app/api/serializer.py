@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from coderr_app.models import Offer, OfferDetail
+from coderr_app.models import Offer, OfferDetail, Order, Review
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -10,10 +10,10 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ["id", "email", "fullname"]
 
-    #Gibt den vollständigen Namen zurück, falls vorhanden.
-    #Falls nicht, wird der Username genutzt.
+    
     def get_fullname(self, obj):
         return obj.get_full_name() or obj.username
+    
     
 class OfferSerializer(serializers.ModelSerializer):
     user = serializers.IntegerField(source="business_user.id", read_only=True)
@@ -51,10 +51,13 @@ class OfferSerializer(serializers.ModelSerializer):
         # Gibt Benutzerdetails zurück
         return OfferUserDetailsSerializer(obj.business_user).data
 
+
 class OfferUserDetailsSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = User
         fields = ["first_name", "last_name", "username"]
+
 
 class OfferDetailListSerializer(serializers.ModelSerializer):
     url = serializers.SerializerMethodField()
@@ -66,8 +69,35 @@ class OfferDetailListSerializer(serializers.ModelSerializer):
     def get_url(self, obj):
         return f"/offerdetails/{obj.id}/"
 
+
 class OfferDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OfferDetail
         fields = ["id", "offer", "title", "offer_type", "revisions", "delivery_time_in_days", "price", "features"]
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    customer_user = serializers.IntegerField(source="customer_user.id", read_only=True)
+    business_user = serializers.IntegerField(source="business_user.id", read_only=True)
+    customer_username = serializers.CharField(source="customer_user.username", read_only=True)
+    business_username = serializers.CharField(source="business_user.username", read_only=True)
+
+    class Meta:
+        model = Order
+        fields = ["id", "customer_user", "customer_username", "business_user", "business_username", "title", "revisions", "delivery_time_in_days", "price", "features", "offer_type", "status", "created_at", "updated_at"]    
+
+
+class OrderdetailSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Order
+        fields = ["id", "customer_user", "business_user", "title", "revisions", "delivery_time_in_days", "price", "features", "offer_type", "status", "created_at", "updated_at"] 
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Review
+        fields = ["id", "business_user", "reviewer", "rating", "description", "created_at", "updated_at"]
