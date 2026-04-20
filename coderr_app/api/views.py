@@ -66,7 +66,7 @@ class CompletedOrderCountView(APIView):
 class ReviewView(generics.ListCreateAPIView):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
-    permission_classes = [IsAuthenticated, IsReviewAuthorOrReadOnly]
+    permission_classes = [IsAuthenticated] #IsReviewAuthorOrReadOnly]
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -82,6 +82,11 @@ class ReviewView(generics.ListCreateAPIView):
             queryset = queryset.order_by(ordering)
 
         return queryset
+    
+class ReviewSingleView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Review.objects.all()
+    serializer_class = ReviewSerializer
+    permission_classes = [IsAuthenticated, IsReviewAuthorOrReadOnly]    
    
 class BaseInfoView(APIView):   
     permission_classes = [IsAuthenticated]
