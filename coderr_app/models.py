@@ -30,7 +30,7 @@ class OfferDetail(models.Model):
     revisions = models.IntegerField(default=1)
     delivery_time_in_days = models.IntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    features = models.TextField(default=list, blank=True)
+    features = models.JSONField(default=list, blank=True)
 
     def __str__(self):
         return f"{self.offer.title} - {self.title} ({self.offer_type})"    

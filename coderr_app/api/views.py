@@ -3,14 +3,14 @@ from cProfile import Profile
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
+from rest_framework.views import APIView, PermissionDenied
 from django.contrib.auth.models import User
 from django.db import models
 
 from auth_app.api import serializer
 from coderr_app.api.permissions import IsOfferBusinessUserOrReadOnly, IsOrderCustomerOrBusinessUser, IsReviewAuthorOrReadOnly
 from coderr_app.models import Offer, OfferDetail, Order, Review
-from coderr_app.api.serializer import OfferDetailSerializer, UserSerializer, OfferSerializer, OfferDetailListSerializer, OrderSerializer, ReviewSerializer, BaseInfoSerializer
+from coderr_app.api.serializer import OfferCreateUpdateSerializer, OfferDetailSerializer, OfferSingleSerializer, UserSerializer, OfferSerializer, OfferDetailListSerializer, OrderSerializer, ReviewSerializer, BaseInfoSerializer
 
 
 
@@ -18,6 +18,11 @@ class OfferView(generics.ListCreateAPIView):
     queryset = Offer.objects.all()
     serializer_class = OfferSerializer
     permission_classes = [IsAuthenticated, IsOfferBusinessUserOrReadOnly]
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return OfferCreateUpdateSerializer
+        return OfferSerializer
 
     def get_queryset(self):
         queryset = Offer.objects.all()
@@ -54,8 +59,21 @@ class OfferView(generics.ListCreateAPIView):
 
 class OfferSingleView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Offer.objects.all()
-    serializer_class = OfferSerializer
+    serializer_class = OfferSingleSerializer
     permission_classes = [IsAuthenticated, IsOfferBusinessUserOrReadOnly]
+
+    def get_serializer_class(self):
+        if self.request.method == "PATCH":
+            return OfferCreateUpdateSerializer
+        return OfferSingleSerializer
+
+class OfferDetailView(generics.RetrieveUpdateAPIView):
+    queryset = OfferDetail.objects.all()
+    serializer_class = OfferDetailSerializer
+    permission_classes = [IsAuthenticated, IsOfferBusinessUserOrReadOnly]
+    lookup_field = "id"
+
+    
 
 
 class OrderView(generics.ListCreateAPIView):
