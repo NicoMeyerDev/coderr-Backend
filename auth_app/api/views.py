@@ -25,7 +25,7 @@ class RegistrationView(APIView):
             return Response(
                 {
                     "token": token.key,
-                    "fullname": user.username,
+                    "username": user.username,
                     "email": user.email,
                     "user_id": user.id
                 },
@@ -52,7 +52,7 @@ class CustomLoginView(ObtainAuthToken):
             return Response(
                 {
                     "token": token.key,
-                    "fullname": user.username,
+                    "username": user.username,
                     "email": user.email,
                     "user_id": user.id
                 },

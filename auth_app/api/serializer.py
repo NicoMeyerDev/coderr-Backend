@@ -4,7 +4,7 @@ from auth_app.models import Profile
 
 class RegistrationSerializer(serializers.ModelSerializer):
     repeated_password = serializers.CharField(write_only=True)
-    fullname = serializers.CharField(write_only=True)
+    username = serializers.CharField(write_only=True)
     type = serializers.ChoiceField(
         choices=Profile.USER_TYPE_CHOICES,
         write_only=True
@@ -12,15 +12,15 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["fullname", "email", "password", "repeated_password", "type"]
+        fields = ["username", "email", "password", "repeated_password", "type"] #
         extra_kwargs = {
             "password": {"write_only": True}
         }
 
-    def validate_fullname(self, value):
+    def validate_username(self, value):
        
         if User.objects.filter(username=value).exists():
-            raise serializers.ValidationError("This username is already taken.")
+           raise serializers.ValidationError("This username is already taken.")
         return value
 
     def validate_email(self, value):
@@ -40,12 +40,12 @@ class RegistrationSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         
         validated_data.pop("repeated_password")
-        fullname = validated_data.pop("fullname")
+        username = validated_data.pop("username")
         password = validated_data.pop("password")
         type = validated_data.pop("type")
 
         user = User(
-            username=fullname,
+            username=username,
             email=validated_data["email"]
         )
         user.set_password(password)
@@ -55,24 +55,24 @@ class RegistrationSerializer(serializers.ModelSerializer):
         return user
 
 class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+    username = serializers.CharField()
     password = serializers.CharField(write_only=True)
 
     def validate(self, data):
        
-        email = data.get("email")
+        username = data.get("username")
         password = data.get("password")
 
         try:
-            user = User.objects.get(email=email)
+            user = User.objects.get(username=username)
         except User.DoesNotExist:
             raise serializers.ValidationError(
-                {"error": "Email or password is incorrect."}
+                {"error": "Username or password is incorrect."}
             )
 
         if not user.check_password(password):
             raise serializers.ValidationError(
-                {"error": "Email or password is incorrect."}
+                {"error": "Username or password is incorrect."}
             )
 
         data["user"] = user

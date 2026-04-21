@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 class Profile(models.Model):
     USER_TYPE_CHOICES = (
         ("customer", "Customer"),
-        ("business_user", "Business User"),
+        ("business", "Business"),
     )
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     file = models.FileField(upload_to="profile_files/", null=True, blank=True)

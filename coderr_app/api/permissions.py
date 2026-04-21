@@ -5,7 +5,7 @@ from coderr_app.models import Offer, Order, Review
 # Angebot: alle d�rfen lesen, nur business_user darf �ndern und l�schen
 class IsOfferBusinessUserOrReadOnly(BasePermission):
 
-    def has_permission(self, request):
+    def has_permission(self, request, view):
         if request.method in SAFE_METHODS:
             return True
         return bool(request.user and request.user.is_authenticated)
@@ -19,7 +19,7 @@ class IsOfferBusinessUserOrReadOnly(BasePermission):
 # Bestellung: Kunde darf erstellen/�ndern/l�schen, Business User darf sehen
 class IsOrderCustomerOrBusinessUser(BasePermission):
 
-    def has_permission(self, request):
+    def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated)
 
     def has_object_permission(self, request, obj):

@@ -35,20 +35,17 @@ class OfferSerializer(serializers.ModelSerializer):
     
     def get_details(self, obj):
         details = obj.details.all()
-        return OfferDetailSerializer(details, many=True).data
-    
+        return OfferDetailListSerializer(details, many=True).data
+
     def get_min_price(self, obj):
-        # Berechnet den minimalen Preis aus den Details
-        prices = obj.details.values_list("price", flat=True)  # Annahme: Feld 'price' in OfferDetail
+        prices = obj.details.values_list("price", flat=True)
         return min(prices) if prices else None
-    
+
     def get_min_delivery_time(self, obj):
-        # Berechnet die minimale Lieferzeit aus den Details
         times = obj.details.values_list("delivery_time_in_days", flat=True)  # Annahme: Feld 'delivery_time' in OfferDetail
         return min(times) if times else None
     
     def get_user_details(self, obj):
-        # Gibt Benutzerdetails zurück
         return OfferUserDetailsSerializer(obj.business_user).data
 
 

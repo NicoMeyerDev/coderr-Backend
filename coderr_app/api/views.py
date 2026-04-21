@@ -19,6 +19,35 @@ class OfferView(generics.ListCreateAPIView):
     serializer_class = OfferSerializer
     permission_classes = [IsAuthenticated, IsOfferBusinessUserOrReadOnly]
 
+    def get_queryset(self):
+        queryset = Offer.objects.all()
+
+        creator_id = self.request.query_params.get("creator_id")
+        min_price = self.request.query_params.get("min_price")
+        max_delivery_time = self.request.query_params.get("max_delivery_time")
+        ordering = self.request.query_params.get("ordering")
+        search = self.request.query_params.get("search")
+
+        if creator_id:
+            queryset = queryset.filter(business_user_id=creator_id)
+
+        if min_price:
+            queryset = queryset.filter(offer_details__price__gte=min_price)
+
+        if max_delivery_time:
+            queryset = queryset.filter(offer_details__delivery_time_in_days__lte=max_delivery_time)
+
+        if search:
+            queryset = queryset.filter(
+                models.Q(title__icontains=search) |
+                models.Q(description__icontains=search)
+            )
+
+        if ordering in ("updated_at", "-updated_at"):
+            queryset = queryset.order_by(ordering)
+
+        return queryset.distinct()
+
     def perform_create(self, serializer):
         serializer.save(business_user=self.request.user)
 
