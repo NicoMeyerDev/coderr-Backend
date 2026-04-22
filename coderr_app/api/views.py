@@ -1,14 +1,15 @@
-from cProfile import Profile
+from auth_app.models import Profile
 
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView, PermissionDenied
+from rest_framework.views import APIView
+from rest_framework.exceptions import ValidationError
 from django.contrib.auth.models import User
 from django.db import models
 
 from auth_app.api import serializer
-from coderr_app.api.permissions import IsOfferBusinessUserOrReadOnly, IsOrderCustomerOrBusinessUser, IsReviewAuthorOrReadOnly
+from coderr_app.api.permissions import  IsOfferBusinessUserOrReadOnly, IsOrderCustomerOrBusinessUser, IsReviewAuthorOrReadOnly
 from coderr_app.models import Offer, OfferDetail, Order, Review
 from coderr_app.api.serializer import OfferCreateUpdateSerializer, OfferDetailSerializer, OfferSingleSerializer, UserSerializer, OfferSerializer, OfferDetailListSerializer, OrderSerializer, ReviewSerializer, BaseInfoSerializer
 
@@ -34,13 +35,28 @@ class OfferView(generics.ListCreateAPIView):
         search = self.request.query_params.get("search")
 
         if creator_id:
+            try:
+                creator_id = int(creator_id)    
+            except ValueError:
+                raise ValidationError({"creator_id": "Ungültiger Wert."})
+
             queryset = queryset.filter(business_user_id=creator_id)
 
         if min_price:
-            queryset = queryset.filter(offer_details__price__gte=min_price)
+            try:
+                min_price = float(min_price)
+            except ValueError:
+                raise ValidationError({"min_price": "Ungültiger Wert."})
+            
+            queryset = queryset.filter(details__price__gte=min_price)
 
         if max_delivery_time:
-            queryset = queryset.filter(offer_details__delivery_time_in_days__lte=max_delivery_time)
+            try:
+                max_delivery_time = int(max_delivery_time)
+            except ValueError:
+                raise ValidationError({"max_delivery_time": "Ungültiger Wert."})
+
+            queryset = queryset.filter(details__delivery_time_in_days__lte=max_delivery_time)
 
         if search:
             queryset = queryset.filter(
@@ -57,6 +73,8 @@ class OfferView(generics.ListCreateAPIView):
         serializer.save(business_user=self.request.user)
 
 
+
+
 class OfferSingleView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Offer.objects.all()
     serializer_class = OfferSingleSerializer
@@ -67,6 +85,7 @@ class OfferSingleView(generics.RetrieveUpdateDestroyAPIView):
             return OfferCreateUpdateSerializer
         return OfferSingleSerializer
 
+
 class OfferDetailView(generics.RetrieveUpdateAPIView):
     queryset = OfferDetail.objects.all()
     serializer_class = OfferDetailSerializer
@@ -74,16 +93,17 @@ class OfferDetailView(generics.RetrieveUpdateAPIView):
     lookup_field = "id"
 
     
-
-
 class OrderView(generics.ListCreateAPIView):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated, IsOrderCustomerOrBusinessUser]
+    pagination_class = None
 
     def perform_create(self, serializer):
-        serializer.save(customer_user=self.request.user)
-
+        offer_detail_id = self.request.data.get("offer_detail_id")
+        offer_detail = OfferDetail.objects.get(id=offer_detail_id)
+        serializer.save(customer_user=self.request.user, business_user=offer_detail.offer.business_user, title=offer_detail.offer.title, revisions=offer_detail.revisions, delivery_time_in_days=offer_detail.delivery_time_in_days, price=offer_detail.price, features=offer_detail.features, offer_type=offer_detail.offer_type)
+        
 
 class OrderSingleView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Order.objects.all()
@@ -93,11 +113,12 @@ class OrderSingleView(generics.RetrieveUpdateDestroyAPIView):
 
 class BusinessOrderCountView(APIView):
     permission_classes = [IsAuthenticated]
+    
 
     def get(self, request, *args, **kwargs):
-        user = request.user
-        count = Order.objects.filter(business_user=user, status="in_progress").count()
-        return Response({"in_progress_order_count": count}) 
+        user_id = self.kwargs.get("user_id")
+        count = Order.objects.filter(business_user_id=user_id, status="in_progress").count()
+        return Response({"order_count": count}) 
 
 
 class CompletedOrderCountView(APIView):
@@ -114,6 +135,7 @@ class ReviewView(generics.ListCreateAPIView):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
     permission_classes = [IsAuthenticated] #IsReviewAuthorOrReadOnly]
+    pagination_class = None
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -130,27 +152,34 @@ class ReviewView(generics.ListCreateAPIView):
 
         return queryset
     
+
+    def perform_create(self, serializer):
+        business_user = self.request.data.get("business_user")
+        business_user = User.objects.get(id=business_user)
+        serializer.save(reviewer=self.request.user, business_user=business_user)
+
 class ReviewSingleView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
     permission_classes = [IsAuthenticated, IsReviewAuthorOrReadOnly]    
-   
+
+
 class BaseInfoView(APIView):   
     permission_classes = [IsAuthenticated]
     
    
 
     def get(self, request, *args, **kwargs):
-        total_reviews = Review.objects.count()
+        review_count = Review.objects.count()
         average_rating = Review.objects.aggregate(average_rating=models.Avg("rating"))["average_rating"] or 0
-        total_business_users = Profile.objects.filter(is_business_user=True).count()
-        total_offers = Offer.objects.count()
+        business_profile_count = Profile.objects.filter(type="business").count()
+        offer_count = Offer.objects.count()
 
         data = {
-            "total_reviews": total_reviews,
+            "review_count": review_count,
             "average_rating": average_rating,
-            "total_business_users": total_business_users,
-            "total_offers": total_offers,
+            "business_profile_count": business_profile_count,
+            "offer_count": offer_count,
         }
 
         serializer = BaseInfoSerializer(data=data)

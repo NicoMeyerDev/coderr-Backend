@@ -1,6 +1,7 @@
 from rest_framework.generics import RetrieveUpdateAPIView, ListAPIView
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from auth_app.api.permissions import IsProfileOwnerOrReadOnly
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework import status
@@ -63,16 +64,16 @@ class CustomLoginView(ObtainAuthToken):
 
 class ProfileView(RetrieveUpdateAPIView):
     queryset = Profile.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsProfileOwnerOrReadOnly]
 
     def get_serializer_class(self):
         if self.request.method == "PATCH":
             return ProfileUpdateSerializer
         return ProfileSerializer
-
-    def get_queryset(self):
-        return Profile.objects.filter(user=self.request.user)
     
+    
+
+
 class BusinessProfileListView(ListAPIView):
     serializer_class = ProfileSerializer
 

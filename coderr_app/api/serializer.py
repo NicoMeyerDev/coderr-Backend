@@ -143,12 +143,14 @@ class OfferCreateUpdateSerializer(serializers.ModelSerializer): #
 class OrderSerializer(serializers.ModelSerializer):
     customer_user = serializers.IntegerField(source="customer_user.id", read_only=True)
     business_user = serializers.IntegerField(source="business_user.id", read_only=True)
-    customer_username = serializers.CharField(source="customer_user.username", read_only=True)
-    business_username = serializers.CharField(source="business_user.username", read_only=True)
+    title = serializers.CharField(read_only=True)
+    delivery_time_in_days = serializers.IntegerField(read_only=True)
+    price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+
 
     class Meta:
         model = Order
-        fields = ["id", "customer_user", "customer_username", "business_user", "business_username", "title", "revisions", "delivery_time_in_days", "price", "features", "offer_type", "status", "created_at", "updated_at"]    
+        fields = ["id", "customer_user", "business_user",  "title", "revisions", "delivery_time_in_days", "price", "features", "offer_type", "status", "created_at", "updated_at"]    
 
 
 class OrderdetailSerializer(serializers.ModelSerializer):
@@ -160,16 +162,18 @@ class OrderdetailSerializer(serializers.ModelSerializer):
 
 class ReviewSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(read_only=True)
+    reviewer = serializers.IntegerField(source="reviewer.id", read_only=True)
 
     class Meta:
         model = Review
         fields = ["id", "business_user", "reviewer", "rating", "description", "created_at", "updated_at"]
 
+
 class BaseInfoSerializer(serializers.Serializer):
-    total_reviews = serializers.IntegerField()
+    review_count = serializers.IntegerField()
     average_rating = serializers.FloatField()
-    total_business_users = serializers.IntegerField()
-    total_offers = serializers.IntegerField()
+    business_profile_count = serializers.IntegerField()
+    offer_count = serializers.IntegerField()
 
     class Meta:
-        fields = ["total_reviews", "average_rating", "total_business_users", "total_offers"]
+        fields = ["review_count", "average_rating", "business_profile_count", "offer_count"]
