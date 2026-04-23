@@ -23,6 +23,13 @@ class IsOrderCustomerOrBusinessUser(BasePermission):
 
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated)
+    
+    #has permisision für post. nutzer ist authentifiziert, aber darf nur customer sein, wenn er post request macht
+    def has_permission(self, request, view):
+        if request.method == "POST":
+            return bool(request.user and request.user.is_authenticated and request.user.profile.type == "customer")
+        return bool(request.user and request.user.is_authenticated)
+        
 
     def has_object_permission(self, request, view, obj):
         if request.method in SAFE_METHODS:

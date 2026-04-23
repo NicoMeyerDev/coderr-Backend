@@ -4,7 +4,7 @@ from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import NotFound, ValidationError
 from django.contrib.auth.models import User
 from django.db import models
 
@@ -101,9 +101,22 @@ class OrderView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         offer_detail_id = self.request.data.get("offer_detail_id")
-        offer_detail = OfferDetail.objects.get(id=offer_detail_id)
-        serializer.save(customer_user=self.request.user, business_user=offer_detail.offer.business_user, title=offer_detail.offer.title, revisions=offer_detail.revisions, delivery_time_in_days=offer_detail.delivery_time_in_days, price=offer_detail.price, features=offer_detail.features, offer_type=offer_detail.offer_type)
         
+        if not offer_detail_id:
+            raise ValidationError({"offer_detail_id": "Dieses Feld ist erforderlich."})
+        
+        try:
+            offer_detail_id = int(offer_detail_id)
+        except (ValueError, TypeError):
+                raise ValidationError({"offer_detail_id": "Ungültiger Wert."})
+    
+        try:
+            offer_detail = OfferDetail.objects.get(id=offer_detail_id)
+        except OfferDetail.DoesNotExist:
+                raise NotFound({"offer_detail_id": "OfferDetail nicht gefunden."})  
+
+        serializer.save(customer_user=self.request.user, business_user=offer_detail.offer.business_user, title=offer_detail.offer.title, revisions=offer_detail.revisions, delivery_time_in_days=offer_detail.delivery_time_in_days, price=offer_detail.price, features=offer_detail.features, offer_type=offer_detail.offer_type)
+       
 
 class OrderSingleView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Order.objects.all()
@@ -117,17 +130,34 @@ class BusinessOrderCountView(APIView):
 
     def get(self, request, *args, **kwargs):
         user_id = self.kwargs.get("user_id")
+
+        if not user_id:
+            raise ValidationError({"user_id": "Dieses Feld ist erforderlich."})    
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            raise NotFound({"detail": "Benutzer nicht gefunden."})
+
+        
+        
         count = Order.objects.filter(business_user_id=user_id, status="in_progress").count()
         return Response({"order_count": count}) 
 
-
+        
 class CompletedOrderCountView(APIView):
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        user = request.user
-        count = Order.objects.filter(business_user=user, status="completed").count()
+        user_id = self.kwargs.get("user_id")
+        if not user_id:
+            raise ValidationError({"user_id": "Dieses Feld ist erforderlich."})    
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            raise NotFound({"detail": "Benutzer nicht gefunden."})
+        
+        count = Order.objects.filter(business_user_id=user_id, status="completed").count()
         return Response({"completed_order_count": count})    
 
 
@@ -152,12 +182,17 @@ class ReviewView(generics.ListCreateAPIView):
 
         return queryset
     
-
     def perform_create(self, serializer):
         business_user = self.request.data.get("business_user")
         business_user = User.objects.get(id=business_user)
+        
+        already_reviewed = Review.objects.filter(reviewer=self.request.user, business_user=business_user).exists()
+        print(already_reviewed, self.request.user, business_user)
+        if already_reviewed:
+            raise ValidationError({"detail": "Sie haben diesen Business bereits bewertet."})
         serializer.save(reviewer=self.request.user, business_user=business_user)
 
+    
 class ReviewSingleView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
