@@ -63,9 +63,15 @@ class CustomLoginView(ObtainAuthToken):
         return Response(serializer.errors, status=400)
 
 class ProfileView(RetrieveUpdateAPIView):
-    queryset = Profile.objects.all()
+    
     permission_classes = [IsAuthenticated, IsProfileOwnerOrReadOnly]
 
+    def get_object(self):
+        profile = Profile.objects.get(user__id=self.kwargs["pk"])
+        self.check_object_permissions(self.request, profile)
+        return profile
+    
+    
     def get_serializer_class(self):
         if self.request.method == "PATCH":
             return ProfileUpdateSerializer
@@ -76,12 +82,14 @@ class ProfileView(RetrieveUpdateAPIView):
 
 class BusinessProfileListView(ListAPIView):
     serializer_class = ProfileSerializer
+    pagination_class = None
 
     def get_queryset(self):
         return Profile.objects.filter(type="business")
 
 class CustomerProfileListView(ListAPIView):
     serializer_class = ProfileSerializer
+    pagination_class = None
 
     def get_queryset(self):
         return Profile.objects.filter(type="customer")        
