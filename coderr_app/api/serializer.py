@@ -20,7 +20,7 @@ class OfferUserDetailsSerializer(serializers.ModelSerializer):
         model = User
         fields = ["id", "email", "first_name", "last_name"]
 
-#details in GET offer + GET offers/id (id + url)
+
 class OfferDetailListSerializer(serializers.ModelSerializer):
     url = serializers.SerializerMethodField()
 
@@ -31,14 +31,14 @@ class OfferDetailListSerializer(serializers.ModelSerializer):
     def get_url(self, obj):
         return f"/offerdetails/{obj.id}/"
 
-#GET offerdetails/id
+
 class OfferDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OfferDetail
         fields = ["id", "title", "revisions", "price", "delivery_time_in_days", "features", "offer_type"]
 
-#GET POST offers
+
 class OfferSerializer(serializers.ModelSerializer):
     user = serializers.IntegerField(source="business_user.id", read_only=True)
     details = OfferDetailSerializer(many=True)
@@ -79,7 +79,7 @@ class OfferSerializer(serializers.ModelSerializer):
             OfferDetail.objects.create(offer=offer, **detail_data)
         return offer
 
-#GET PATCH offers/id
+
 class OfferSingleSerializer(serializers.ModelSerializer):
     details = OfferDetailListSerializer(many=True, read_only=True)#
     user = serializers.IntegerField(source="business_user.id", read_only=True)
@@ -98,7 +98,7 @@ class OfferSingleSerializer(serializers.ModelSerializer):
         times = obj.details.values_list("delivery_time_in_days", flat=True)  # Annahme: Feld 'delivery_time' in OfferDetail
         return min(times) if times else None
 
-#POST PATCH offers/id
+
 class OfferCreateUpdateSerializer(serializers.ModelSerializer): #
     details = OfferDetailSerializer(many=True)
 

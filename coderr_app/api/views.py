@@ -73,8 +73,6 @@ class OfferView(generics.ListCreateAPIView):
         serializer.save(business_user=self.request.user)
 
 
-
-
 class OfferSingleView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Offer.objects.all()
     serializer_class = OfferSingleSerializer
