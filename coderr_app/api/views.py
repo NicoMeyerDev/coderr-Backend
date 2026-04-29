@@ -1,76 +1,48 @@
-from auth_app.models import Profile
-
-from rest_framework import generics
-from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.views import APIView, PermissionDenied
-from rest_framework.exceptions import NotFound, ValidationError, PermissionDenied
 from django.contrib.auth.models import User
 from django.db import models
-from django.db.models import Min
+from django_filters.rest_framework import DjangoFilterBackend
 
+from rest_framework import generics, status
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
+from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from coderr_app.api.permissions import  IsOfferBusinessUserOrReadOnly, IsOrderCustomerOrBusinessUser, IsReviewAuthorOrReadOnly
+from auth_app.models import Profile
+
+from ..filters import OfferFilter, ReviewFilter
+from .pagination import CustomPagination
+from .permissions import IsOfferBusinessUserOrReadOnly, IsOrderCustomerOrBusinessUser, IsReviewAuthorOrReadOnly
+from .serializer import (BaseInfoSerializer,OfferCreateUpdateSerializer,OfferDetailListSerializer,OfferDetailSerializer,OfferIdSerializer,OfferSerializer,OfferSingleSerializer,OrderSerializer,ReviewSerializer,UserSerializer,)
 from coderr_app.models import Offer, OfferDetail, Order, Review
-from coderr_app.api.serializer import OfferCreateUpdateSerializer, OfferDetailSerializer, OfferIdSerializer, OfferSingleSerializer, UserSerializer, OfferSerializer, OfferDetailListSerializer, OrderSerializer, ReviewSerializer, BaseInfoSerializer
-from coderr_app.api.pagination import CustomPagination
 
 
 class OfferView(generics.ListCreateAPIView):
+    """
+    Lists and creates offers with filtering, search, and ordering.
+    Allows authenticated business users to create new offers.
+    Supports pagination for large result sets.
+    """
     queryset = Offer.objects.all()
     serializer_class = OfferSerializer
     pagination_class = CustomPagination
+
+    filter_backends = [
+        DjangoFilterBackend,
+        SearchFilter,
+        OrderingFilter,
+    ]
+
+    filterset_class = OfferFilter
+    search_fields = ["title", "description"]
+    ordering_fields = ["updated_at"]
+    
 
     def get_serializer_class(self):
         if self.request.method == "POST":
             return OfferCreateUpdateSerializer
         return OfferSerializer
-
-    def get_queryset(self):
-        queryset = Offer.objects.all()
-
-        creator_id = self.request.query_params.get("creator_id")
-        min_price = self.request.query_params.get("min_price")
-        max_delivery_time = self.request.query_params.get("max_delivery_time")
-        ordering = self.request.query_params.get("ordering")
-        search = self.request.query_params.get("search")
-
-        if creator_id:
-            try:
-                creator_id = int(creator_id)    
-            except ValueError:
-                raise ValidationError({"creator_id": "Ungültiger Wert."})
-            
-
-            queryset = queryset.filter(business_user_id=creator_id)
-
-        if min_price:
-            try:
-                min_price = float(min_price)
-            except ValueError:
-                raise ValidationError({"min_price": "Ungültiger Wert."})
-            
-            queryset = queryset.annotate(lowest_price=Min("details__price")).filter(lowest_price__gte=min_price)
-
-        if max_delivery_time:
-            try:
-                max_delivery_time = int(max_delivery_time)
-            except ValueError:
-                raise ValidationError({"max_delivery_time": "Ungültiger Wert."})
-
-            queryset = queryset.annotate(lowest_delivery_time=Min("details__delivery_time_in_days")).filter(lowest_delivery_time__lte=max_delivery_time)
-
-        if search:
-            queryset = queryset.filter(
-                models.Q(title__icontains=search) |
-                models.Q(description__icontains=search)
-            )
-
-        if ordering in ("updated_at", "-updated_at"):
-            queryset = queryset.order_by(ordering)
-
-        return queryset.distinct()
 
     def perform_create(self, serializer):
         serializer.save(business_user=self.request.user)
@@ -82,6 +54,11 @@ class OfferView(generics.ListCreateAPIView):
 
 
 class OfferSingleView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Retrieves, updates, or deletes a single offer.
+    Requires authentication and appropriate permissions.
+    Supports partial updates for flexibility.
+    """
     queryset = Offer.objects.all()
     serializer_class = OfferSingleSerializer
     permission_classes = [IsAuthenticated, IsOfferBusinessUserOrReadOnly]
@@ -102,6 +79,11 @@ class OfferSingleView(generics.RetrieveUpdateDestroyAPIView):
     
 
 class OfferDetailView(generics.RetrieveUpdateAPIView):
+    """
+    Retrieves and updates offer details.
+    Allows business users to modify specific offer information.
+    Ensures proper permissions are enforced.
+    """
     queryset = OfferDetail.objects.all()
     serializer_class = OfferDetailSerializer
     permission_classes = [IsAuthenticated, IsOfferBusinessUserOrReadOnly]
@@ -109,6 +91,11 @@ class OfferDetailView(generics.RetrieveUpdateAPIView):
 
     
 class OrderView(generics.ListCreateAPIView):
+    """
+    Lists and creates orders based on offer details.
+    Automatically populates order data from selected offers.
+    Requires authentication for order creation.
+    """
     queryset = Order.objects.all().order_by("created_at")
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated, IsOrderCustomerOrBusinessUser]
@@ -134,12 +121,18 @@ class OrderView(generics.ListCreateAPIView):
        
 
 class OrderSingleView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Retrieves, updates, or deletes a single order.
+    Ensures only authorized users can modify orders.
+    Supports full CRUD operations with validation.
+    """
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated, IsOrderCustomerOrBusinessUser]
     
 
 class BusinessOrderCountView(APIView):
+    """Returns the count of in-progress orders for a business user."""
     permission_classes = [IsAuthenticated]
     
 
@@ -160,7 +153,7 @@ class BusinessOrderCountView(APIView):
 
         
 class CompletedOrderCountView(APIView):
-
+    """Returns the count of completed orders for a business user."""
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
@@ -177,47 +170,69 @@ class CompletedOrderCountView(APIView):
 
 
 class ReviewView(generics.ListCreateAPIView):
+    """
+    Lists and creates reviews with validation.
+    Prevents duplicate reviews from the same customer.
+    Allows filtering and ordering of reviews.
+    """
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
-    permission_classes = [IsAuthenticated] #IsReviewAuthorOrReadOnly]
+    permission_classes = [IsAuthenticated]
     pagination_class = None
 
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        business_user_id = self.request.query_params.get("business_user_id")
-        reviewer_id = self.request.query_params.get("reviewer_id")
-        ordering = self.request.query_params.get("ordering")
+    filter_backends = [
+        DjangoFilterBackend,
+        OrderingFilter,
+    ]
 
-        if business_user_id:
-            queryset = queryset.filter(business_user_id=business_user_id)
-        if reviewer_id:
-            queryset = queryset.filter(reviewer_id=reviewer_id)
-        if ordering in ("updated_at", "-updated_at", "rating", "-rating"):
-            queryset = queryset.order_by(ordering)
+    filterset_class = ReviewFilter
+    ordering_fields = ["updated_at", "rating"]
 
-        return queryset
-    
+
     def perform_create(self, serializer):
-        business_user = self.request.data.get("business_user")
-        business_user = User.objects.get(id=business_user)
-        
+        business_user_id = self.request.data.get("business_user")
+
+        if not business_user_id:
+            raise ValidationError({"business_user": "Dieses Feld ist erforderlich."})
+
+        business_user = get_object_or_404(User, id=business_user_id)
+
         if self.request.user.profile.type != "customer":
             raise PermissionDenied("Nur Kunden können Bewertungen erstellen.")
 
-        already_reviewed = Review.objects.filter(reviewer=self.request.user, business_user=business_user).exists()
-        print(already_reviewed, self.request.user, business_user)
+        already_reviewed = Review.objects.filter(
+            reviewer=self.request.user,
+            business_user=business_user
+        ).exists()
+
         if already_reviewed:
-            raise ValidationError({"detail": "Sie haben diesen Business bereits bewertet."})
-        serializer.save(reviewer=self.request.user, business_user=business_user)
+            raise ValidationError({
+                "detail": "Sie haben diesen Business-User bereits bewertet."
+            })
+
+        serializer.save(
+            reviewer=self.request.user,
+            business_user=business_user
+        )
 
     
 class ReviewSingleView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Retrieves, updates, or deletes a single review.
+    Only the review author can modify their review.
+    Enforces read-only access for others.
+    """
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
     permission_classes = [IsAuthenticated, IsReviewAuthorOrReadOnly]    
 
 
-class BaseInfoView(APIView):   
+class BaseInfoView(APIView):
+    """
+    Provides basic platform statistics.
+    Includes review counts, average ratings, and user metrics.
+    Accessible to all users without authentication.
+    """
     permission_classes = [AllowAny]
     
    

@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'coderr_app',
     'rest_framework',
+    "django_filters",
 ]
 
 MIDDLEWARE = [
@@ -133,4 +134,8 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 10,
     'PAGE_SIZE_QUERY_PARAM': 'page_size',
     'UNAUTHENTICATED_USER': None,
+    
+    "DEFAULT_FILTER_BACKENDS": [
+        "django_filters.rest_framework.DjangoFilterBackend"
+    ]
 }

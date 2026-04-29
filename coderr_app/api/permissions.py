@@ -17,8 +17,6 @@ class IsOfferBusinessUserOrReadOnly(BasePermission):
             return True
         return obj.business_user == request.user
 
-
-
 class IsOrderCustomerOrBusinessUser(BasePermission):
 
     def has_permission(self, request, view):
@@ -37,7 +35,6 @@ class IsOrderCustomerOrBusinessUser(BasePermission):
         if request.method in ("PATCH", "PUT", "DELETE"):
              return obj.business_user == request.user
         return False
-
 
 
 class IsReviewAuthorOrReadOnly(BasePermission):

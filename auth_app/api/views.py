@@ -11,6 +11,7 @@ from auth_app.models import Profile
 from .serializer import BusinessProfileSerializer, CustomerProfileSerializer, RegistrationSerializer, LoginSerializer, ProfileSerializer, ProfileUpdateSerializer
 
 class RegistrationView(APIView):
+    """Handles user registration and token creation."""
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -37,6 +38,7 @@ class RegistrationView(APIView):
         return Response(serializer.errors, status=400)
 
 class CustomLoginView(ObtainAuthToken):
+    """Handles user authentication and token retrieval."""
     permission_classes = [AllowAny]
     serializer_class = LoginSerializer
 
@@ -64,7 +66,7 @@ class CustomLoginView(ObtainAuthToken):
         return Response(serializer.errors, status=400)
 
 class ProfileView(RetrieveUpdateAPIView):
-    
+    """Retrieves and updates user profiles."""
     permission_classes = [IsAuthenticated, IsProfileOwnerOrReadOnly]
 
     def get_object(self):
@@ -92,6 +94,7 @@ class ProfileView(RetrieveUpdateAPIView):
 
 
 class BusinessProfileListView(ListAPIView):
+    """Lists all business profiles."""
     serializer_class = BusinessProfileSerializer
     pagination_class = None
 
@@ -99,6 +102,7 @@ class BusinessProfileListView(ListAPIView):
         return Profile.objects.filter(type="business")
 
 class CustomerProfileListView(ListAPIView):
+    """Lists all customer profiles."""
     serializer_class = CustomerProfileSerializer
     pagination_class = None
 
