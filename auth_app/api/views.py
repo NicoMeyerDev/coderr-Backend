@@ -1,13 +1,15 @@
-from rest_framework.generics import RetrieveUpdateAPIView, ListAPIView
-from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from auth_app.api.permissions import IsProfileOwnerOrReadOnly
-from rest_framework.authtoken.models import Token
-from rest_framework.response import Response
-from rest_framework.exceptions import NotFound
 from rest_framework import status
+from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.exceptions import NotFound
+from rest_framework.generics import ListAPIView, RetrieveUpdateAPIView
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from auth_app.api.permissions import IsProfileOwnerOrReadOnly
 from auth_app.models import Profile
+
 from .serializer import BusinessProfileSerializer, CustomerProfileSerializer, RegistrationSerializer, LoginSerializer, ProfileSerializer, ProfileUpdateSerializer
 
 class RegistrationView(APIView):
