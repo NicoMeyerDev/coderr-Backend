@@ -4,8 +4,8 @@ from rest_framework import generics
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.views import APIView, PermissionDenied
+from rest_framework.exceptions import NotFound, ValidationError, PermissionDenied
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import Min
@@ -101,7 +101,6 @@ class OfferSingleView(generics.RetrieveUpdateDestroyAPIView):
         return Response(read_serializer.data, status=status.HTTP_200_OK)
     
 
-
 class OfferDetailView(generics.RetrieveUpdateAPIView):
     queryset = OfferDetail.objects.all()
     serializer_class = OfferDetailSerializer
@@ -110,7 +109,7 @@ class OfferDetailView(generics.RetrieveUpdateAPIView):
 
     
 class OrderView(generics.ListCreateAPIView):
-    queryset = Order.objects.all()
+    queryset = Order.objects.all().order_by("created_at")
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated, IsOrderCustomerOrBusinessUser]
     pagination_class = None
@@ -202,6 +201,9 @@ class ReviewView(generics.ListCreateAPIView):
         business_user = self.request.data.get("business_user")
         business_user = User.objects.get(id=business_user)
         
+        if self.request.user.profile.type != "customer":
+            raise PermissionDenied("Nur Kunden können Bewertungen erstellen.")
+
         already_reviewed = Review.objects.filter(reviewer=self.request.user, business_user=business_user).exists()
         print(already_reviewed, self.request.user, business_user)
         if already_reviewed:

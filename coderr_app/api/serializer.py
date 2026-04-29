@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from coderr_app.models import Offer, OfferDetail, Order, Review
+from rest_framework.exceptions import ValidationError
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -33,10 +34,11 @@ class OfferDetailListSerializer(serializers.ModelSerializer):
 
 
 class OfferDetailSerializer(serializers.ModelSerializer):
+    price = serializers.DecimalField(max_digits=10, decimal_places=2, coerce_to_string=False)
 
     class Meta:
         model = OfferDetail
-        fields = ["id", "title", "revisions", "price", "delivery_time_in_days", "features", "offer_type"]
+        fields = ["id", "title", "revisions", "delivery_time_in_days", "price", "features", "offer_type"]
 
 
 class OfferSerializer(serializers.ModelSerializer):
@@ -79,30 +81,26 @@ class OfferSerializer(serializers.ModelSerializer):
             OfferDetail.objects.create(offer=offer, **detail_data)
         return offer
 
+
 class OfferIdSerializer(OfferSerializer):
     class Meta:
         model = Offer
         fields = ["id", "user", "title", "image", "description", "created_at", "updated_at", "details", "min_price", "min_delivery_time"]
 
+
 class OfferSingleSerializer(serializers.ModelSerializer):
     details = OfferDetailSerializer(many=True, read_only=True)
-    # user = serializers.IntegerField(source="business_user.id", read_only=True)
-    min_price = serializers.SerializerMethodField()
-    min_delivery_time = serializers.SerializerMethodField()
+   
 
     class Meta:
         model = Offer
-        fields = ["id","title", "image", "description", "details", "min_delivery_time", "min_price",]
+        fields = ["id","title", "image", "description", "details"]
 
-    def get_min_price(self, obj):
-        prices = obj.details.values_list("price", flat=True)
-        return min(prices) if prices else None
-
-    def get_min_delivery_time(self, obj):
-        times = obj.details.values_list("delivery_time_in_days", flat=True)  # Annahme: Feld 'delivery_time' in OfferDetail
-        return min(times) if times else None
-
-
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['details'] = sorted(rep['details'], key=lambda x: x['id'])
+        return rep
+    
 class OfferCreateUpdateSerializer(serializers.ModelSerializer): #
     details = OfferDetailSerializer(many=True)
 
@@ -126,22 +124,25 @@ class OfferCreateUpdateSerializer(serializers.ModelSerializer): #
 
         # Details aktualisieren
         for detail_data in details_data:
-            detail_id = detail_data.get("id")
-            if detail_id:
-                # Existierendes Detail aktualisieren
-                detail = OfferDetail.objects.get(id=detail_id, offer=instance)
+            offer_type = detail_data.get("offer_type")
+           
+            try:
+                detail = OfferDetail.objects.get(offer=instance, offer_type=offer_type)
                 detail.title = detail_data.get("title", detail.title)
                 detail.revisions = detail_data.get("revisions", detail.revisions)
                 detail.price = detail_data.get("price", detail.price)
                 detail.delivery_time_in_days = detail_data.get("delivery_time_in_days", detail.delivery_time_in_days)
                 detail.features = detail_data.get("features", detail.features)
-                detail.offer_type = detail_data.get("offer_type", detail.offer_type)
                 detail.save()
-            else:
-                # Neues Detail erstellen
-                OfferDetail.objects.create(offer=instance, **detail_data)
+            except OfferDetail.DoesNotExist:
+                raise ValidationError({"offer_type": f"Kein Detail mit offer_type '{offer_type}' gefunden."})
 
         return instance
+    
+    def validate_details(self, value):
+        if self.instance is None and len(value) < 3:
+            raise serializers.ValidationError("Ein Angebot muss mindestens 3 Details enthalten.")
+        return value
 
 
 class OrderSerializer(serializers.ModelSerializer):
