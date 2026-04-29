@@ -4,10 +4,11 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from auth_app.api.permissions import IsProfileOwnerOrReadOnly
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
+from rest_framework.exceptions import NotFound
 from rest_framework import status
 from rest_framework.authtoken.views import ObtainAuthToken
 from auth_app.models import Profile
-from .serializer import RegistrationSerializer, LoginSerializer, ProfileSerializer, ProfileUpdateSerializer
+from .serializer import BusinessProfileSerializer, CustomerProfileSerializer, RegistrationSerializer, LoginSerializer, ProfileSerializer, ProfileUpdateSerializer
 
 class RegistrationView(APIView):
     permission_classes = [AllowAny]
@@ -67,7 +68,10 @@ class ProfileView(RetrieveUpdateAPIView):
     permission_classes = [IsAuthenticated, IsProfileOwnerOrReadOnly]
 
     def get_object(self):
-        profile = Profile.objects.get(user__id=self.kwargs["pk"])
+        try:
+            profile = Profile.objects.get(user__id=self.kwargs["pk"])
+        except Profile.DoesNotExist:
+            raise NotFound({"detail": "Profil nicht gefunden."})
         self.check_object_permissions(self.request, profile)
         return profile
     
@@ -77,18 +81,25 @@ class ProfileView(RetrieveUpdateAPIView):
             return ProfileUpdateSerializer
         return ProfileSerializer
     
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        write_serializer = ProfileUpdateSerializer(instance=instance, data=request.data, partial=True)
+        write_serializer.is_valid(raise_exception=True)
+        write_serializer.save()
+        read_serializer = ProfileSerializer(instance)   
+        return Response(read_serializer.data, status=status.HTTP_200_OK)
     
 
 
 class BusinessProfileListView(ListAPIView):
-    serializer_class = ProfileSerializer
+    serializer_class = BusinessProfileSerializer
     pagination_class = None
 
     def get_queryset(self):
         return Profile.objects.filter(type="business")
 
 class CustomerProfileListView(ListAPIView):
-    serializer_class = ProfileSerializer
+    serializer_class = CustomerProfileSerializer
     pagination_class = None
 
     def get_queryset(self):

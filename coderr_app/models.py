@@ -50,7 +50,7 @@ class Order(models.Model):
     revisions = models.PositiveIntegerField(default=1)
     delivery_time_in_days = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    features = models.TextField(default=list, blank=True)
+    features = models.JSONField(default=list, blank=True)
     offer_type = models.CharField(max_length=20, choices=OfferDetail.OFFER_TYPE_CHOICES, default="basic")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="in_progress")
     created_at = models.DateTimeField(auto_now_add=True)

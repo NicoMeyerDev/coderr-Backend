@@ -18,7 +18,7 @@ class UserSerializer(serializers.ModelSerializer):
 class OfferUserDetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "email", "first_name", "last_name"]
+        fields = ["first_name", "last_name", "username"]
 
 
 class OfferDetailListSerializer(serializers.ModelSerializer):
@@ -41,14 +41,14 @@ class OfferDetailSerializer(serializers.ModelSerializer):
 
 class OfferSerializer(serializers.ModelSerializer):
     user = serializers.IntegerField(source="business_user.id", read_only=True)
-    details = OfferDetailSerializer(many=True)
+    details = OfferDetailListSerializer(many=True)
     min_price = serializers.SerializerMethodField()
     min_delivery_time = serializers.SerializerMethodField()
     user_details = serializers.SerializerMethodField()
 
     class Meta:
         model = Offer
-        fields = ["id", "user", "title", "description", "image", "created_at", "updated_at", "details", "min_price", "min_delivery_time", "user_details"]
+        fields = ["id", "user", "title", "image", "description", "created_at", "updated_at", "details", "min_price", "min_delivery_time", "user_details"]
 
     
     def validate_title(self, title):
@@ -79,16 +79,20 @@ class OfferSerializer(serializers.ModelSerializer):
             OfferDetail.objects.create(offer=offer, **detail_data)
         return offer
 
+class OfferIdSerializer(OfferSerializer):
+    class Meta:
+        model = Offer
+        fields = ["id", "user", "title", "image", "description", "created_at", "updated_at", "details", "min_price", "min_delivery_time"]
 
 class OfferSingleSerializer(serializers.ModelSerializer):
-    details = OfferDetailListSerializer(many=True, read_only=True)#
-    user = serializers.IntegerField(source="business_user.id", read_only=True)
+    details = OfferDetailSerializer(many=True, read_only=True)
+    # user = serializers.IntegerField(source="business_user.id", read_only=True)
     min_price = serializers.SerializerMethodField()
     min_delivery_time = serializers.SerializerMethodField()
 
     class Meta:
         model = Offer
-        fields = ["id", "user","title", "image", "description", "created_at", "updated_at", "details", "min_price", "min_delivery_time"]
+        fields = ["id","title", "image", "description", "details", "min_delivery_time", "min_price",]
 
     def get_min_price(self, obj):
         prices = obj.details.values_list("price", flat=True)

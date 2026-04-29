@@ -87,7 +87,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 
         class Meta:
             model = Profile
-            fields = ["user", "username", "first_name", "last_name", "file", "location", "tel", "description", "working_hours", "type", "email", "created_at"]    
+            fields = ["user", "username", "first_name", "last_name", "file", "location", "tel", "description", "working_hours", "type", "email", "created_at"]   
 
 class ProfileUpdateSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(source="user.first_name", required=False, allow_blank=True)
@@ -108,6 +108,7 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
             "tel",
             "description",
             "working_hours",
+            
         ]
 
     def update(self, instance, validated_data):
@@ -125,4 +126,15 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
         instance.working_hours = validated_data.get("working_hours", instance.working_hours)
         instance.save()
 
-        return instance            
+        return instance  
+
+class BusinessProfileSerializer(ProfileSerializer):
+    class Meta(ProfileSerializer.Meta):
+            model = Profile
+            fields = ["user", "username", "first_name", "last_name", "file", "location", "tel", "description", "working_hours","type"]
+
+class CustomerProfileSerializer(ProfileSerializer):
+    uploaded_at = serializers.DateTimeField(source="created_at", read_only=True)
+    class Meta(ProfileSerializer.Meta):
+            model = Profile
+            fields = ["user", "username", "first_name", "last_name", "file", "uploaded_at", "type"]                      

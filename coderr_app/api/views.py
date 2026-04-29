@@ -1,24 +1,26 @@
 from auth_app.models import Profile
 
 from rest_framework import generics
-from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.exceptions import NotFound, ValidationError
 from django.contrib.auth.models import User
 from django.db import models
+from django.db.models import Min
 
-from auth_app.api import serializer
+
 from coderr_app.api.permissions import  IsOfferBusinessUserOrReadOnly, IsOrderCustomerOrBusinessUser, IsReviewAuthorOrReadOnly
 from coderr_app.models import Offer, OfferDetail, Order, Review
-from coderr_app.api.serializer import OfferCreateUpdateSerializer, OfferDetailSerializer, OfferSingleSerializer, UserSerializer, OfferSerializer, OfferDetailListSerializer, OrderSerializer, ReviewSerializer, BaseInfoSerializer
-
+from coderr_app.api.serializer import OfferCreateUpdateSerializer, OfferDetailSerializer, OfferIdSerializer, OfferSingleSerializer, UserSerializer, OfferSerializer, OfferDetailListSerializer, OrderSerializer, ReviewSerializer, BaseInfoSerializer
+from coderr_app.api.pagination import CustomPagination
 
 
 class OfferView(generics.ListCreateAPIView):
     queryset = Offer.objects.all()
     serializer_class = OfferSerializer
-    permission_classes = [IsAuthenticated, IsOfferBusinessUserOrReadOnly]
+    pagination_class = CustomPagination
 
     def get_serializer_class(self):
         if self.request.method == "POST":
@@ -39,6 +41,7 @@ class OfferView(generics.ListCreateAPIView):
                 creator_id = int(creator_id)    
             except ValueError:
                 raise ValidationError({"creator_id": "Ungültiger Wert."})
+            
 
             queryset = queryset.filter(business_user_id=creator_id)
 
@@ -48,7 +51,7 @@ class OfferView(generics.ListCreateAPIView):
             except ValueError:
                 raise ValidationError({"min_price": "Ungültiger Wert."})
             
-            queryset = queryset.filter(details__price__gte=min_price)
+            queryset = queryset.annotate(lowest_price=Min("details__price")).filter(lowest_price__gte=min_price)
 
         if max_delivery_time:
             try:
@@ -56,7 +59,7 @@ class OfferView(generics.ListCreateAPIView):
             except ValueError:
                 raise ValidationError({"max_delivery_time": "Ungültiger Wert."})
 
-            queryset = queryset.filter(details__delivery_time_in_days__lte=max_delivery_time)
+            queryset = queryset.annotate(lowest_delivery_time=Min("details__delivery_time_in_days")).filter(lowest_delivery_time__lte=max_delivery_time)
 
         if search:
             queryset = queryset.filter(
@@ -72,16 +75,31 @@ class OfferView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save(business_user=self.request.user)
 
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [IsAuthenticated(), IsOfferBusinessUserOrReadOnly()]
+        return [AllowAny()]
+
 
 class OfferSingleView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Offer.objects.all()
     serializer_class = OfferSingleSerializer
     permission_classes = [IsAuthenticated, IsOfferBusinessUserOrReadOnly]
+    
 
     def get_serializer_class(self):
         if self.request.method == "PATCH":
             return OfferCreateUpdateSerializer
-        return OfferSingleSerializer
+        return OfferIdSerializer
+    
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        write_serializer = OfferCreateUpdateSerializer(instance=instance, data=request.data, partial=True)
+        write_serializer.is_valid(raise_exception=True)
+        write_serializer.save()
+        read_serializer = OfferSingleSerializer(instance)   
+        return Response(read_serializer.data, status=status.HTTP_200_OK)
+    
 
 
 class OfferDetailView(generics.RetrieveUpdateAPIView):
@@ -113,7 +131,7 @@ class OrderView(generics.ListCreateAPIView):
         except OfferDetail.DoesNotExist:
                 raise NotFound({"offer_detail_id": "OfferDetail nicht gefunden."})  
 
-        serializer.save(customer_user=self.request.user, business_user=offer_detail.offer.business_user, title=offer_detail.offer.title, revisions=offer_detail.revisions, delivery_time_in_days=offer_detail.delivery_time_in_days, price=offer_detail.price, features=offer_detail.features, offer_type=offer_detail.offer_type)
+        serializer.save(customer_user=self.request.user, business_user=offer_detail.offer.business_user, title=offer_detail.title, revisions=offer_detail.revisions, delivery_time_in_days=offer_detail.delivery_time_in_days, price=offer_detail.price, features=offer_detail.features, offer_type=offer_detail.offer_type)
        
 
 class OrderSingleView(generics.RetrieveUpdateDestroyAPIView):
@@ -198,13 +216,13 @@ class ReviewSingleView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class BaseInfoView(APIView):   
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     
    
 
     def get(self, request, *args, **kwargs):
         review_count = Review.objects.count()
-        average_rating = Review.objects.aggregate(average_rating=models.Avg("rating"))["average_rating"] or 0
+        average_rating = round(Review.objects.aggregate(average_rating=models.Avg("rating"))["average_rating"] or 0, 1)
         business_profile_count = Profile.objects.filter(type="business").count()
         offer_count = Offer.objects.count()
 
