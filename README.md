@@ -54,3 +54,12 @@ python manage.py runserver
 ```
 
 The API will then be available at: http://127.0.0.1:8000/
+
+---
+## Frontend Repository
+
+Das zugehörige Backend befindet sich hier:
+
+(https://github.com/NicoMeyerDev/Coderr-Frontend)
+
+---
