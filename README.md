@@ -4,6 +4,14 @@ A RESTful backend API for a freelancer developer platform, built with Django RES
 The backend handles all core functionalities such as user management, project handling, bookings, and communication between clients and developers.  
 It is designed to integrate seamlessly with an existing frontend application.
 
+## 🔗 Related Repositories
+
+| Repository   | Description                                      |
+| ------------ | ------------------------------------------------ |
+| **Frontend** | https://github.com/NicoMeyerDev/Coderr-Frontend |
+| **Backend**  | This repository                                  |
+
+
 ## 🛠️ Requirements
 Make sure the following is installed on your computer:
 
@@ -55,11 +63,3 @@ python manage.py runserver
 
 The API will then be available at: http://127.0.0.1:8000/
 
----
-## Frontend Repository
-
-Das zugehörige Frontend befindet sich hier:
-
-(https://github.com/NicoMeyerDev/Coderr-Frontend)
-
----
